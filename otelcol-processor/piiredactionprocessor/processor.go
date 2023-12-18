@@ -1,7 +1,11 @@
 package piiredactionprocessor
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
+	"net/http"
 	"strings"
 
 	"go.opentelemetry.io/collector/pdata/plog"
@@ -18,7 +22,7 @@ func newPiiRedactionProcessor(ctx context.Context, config *Config, logger *zap.L
 	}, nil
 }
 
-func (p *piiRedactionProcessor) processLogs(ctx context.Context, batch plog.Logs) (plog.Logs, error) {
+func (processor *piiRedactionProcessor) processLogs(ctx context.Context, batch plog.Logs) (plog.Logs, error) {
 	resourcesLogs := batch.ResourceLogs()
 	for i := 0; i < resourcesLogs.Len(); i++ {
 		resource := resourcesLogs.At(i)
@@ -28,13 +32,37 @@ func (p *piiRedactionProcessor) processLogs(ctx context.Context, batch plog.Logs
 			logRecords := scope.LogRecords()
 			for k := 0; k < logRecords.Len(); k++ {
 				record := logRecords.At(k)
-				redactPii(ctx, record)
+				processor.redactPii(ctx, record)
 			}
 		}
 	}
 	return batch, nil
 }
 
-func redactPii(ctx context.Context, record plog.LogRecord) {
-	record.Body().SetStr(strings.Repeat("*", len(record.Body().AsString())))
+func (processor *piiRedactionProcessor) redactPii(ctx context.Context, record plog.LogRecord) {
+	// record.Body().SetStr(strings.Repeat("*", len(record.Body().AsString())))
+	inputString := record.Body().AsString()
+	requestData, err := json.Marshal(inputString)
+	if err != nil {
+		panic(err)
+	}
+	response, err := http.Post(processor.config.Endpoint, "application/json", bytes.NewBuffer(requestData))
+	if err != nil {
+		panic(err)
+	}
+	defer response.Body.Close()
+	responseBody, err := io.ReadAll(response.Body)
+	if err != nil {
+		panic(err)
+	}
+	var entities []Entity
+	err = json.Unmarshal(responseBody, &entities)
+	if err != nil {
+		panic(err)
+	}
+	for _, entity := range entities {
+		mask := strings.Repeat("*", len(inputString[entity.Start:entity.End]))
+		inputString = inputString[:entity.Start] + mask + inputString[entity.End:]
+	}
+	record.Body().SetStr(inputString)
 }
