@@ -1,0 +1,22 @@
+exporters:
+  debug:
+    verbosity: detailed
+
+processors:
+  pii_redaction:
+
+receivers:
+  filelog:
+    include:
+    - ./input.txt
+    start_at: beginning
+
+service:
+  pipelines:
+    logs:
+      exporters:
+      - debug
+      processors:
+      - pii_redaction
+      receivers:
+      - filelog

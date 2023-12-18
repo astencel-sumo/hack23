@@ -1,0 +1,20 @@
+dist:
+  name: otelcol-pii
+  otelcol_version: 0.91.0
+  output_path: ./out
+  version: 0.91.0
+
+exporters:
+  - gomod: go.opentelemetry.io/collector/exporter/debugexporter v0.91.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/exporter/fileexporter v0.91.0
+
+receivers:
+  - gomod: go.opentelemetry.io/collector/receiver/otlpreceiver v0.91.0
+  - gomod: github.com/open-telemetry/opentelemetry-collector-contrib/receiver/filelogreceiver v0.91.0
+
+processors:
+  - gomod: github.com/astencel-sumo/piiredactionprocessor v0.91.0
+    path: ../piiredactionprocessor
+
+replaces:
+  - github.com/astencel-sumo/piiredactionprocessor => ../piiredactionprocessor
