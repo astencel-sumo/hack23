@@ -1,0 +1,31 @@
+exporters:
+  debug/basic:
+    verbosity: basic
+  sumologic:
+
+extensions:
+  sumologic:
+    collector_name: pii-redaction
+    installation_token: ${SUMOLOGIC_INSTALLATION_TOKEN}
+
+processors:
+  pii_redaction:
+
+receivers:
+  filelog:
+    include:
+    - ./input.txt
+    start_at: beginning
+
+service:
+  extensions:
+  - sumologic
+  pipelines:
+    logs:
+      exporters:
+      - debug/basic
+      - sumologic
+      processors:
+      - pii_redaction
+      receivers:
+      - filelog
